@@ -47,7 +47,7 @@ struct TherapyMetricState: Codable, Hashable, Sendable {
     }
 
     func formatted(isIOB: Bool, at date: Date = .now) -> String {
-        "\(number(isIOB: isIOB, at: date)) \(isIOB ? "U" : "g")"
+        "\(number(isIOB: isIOB, at: date)) \(isIOB ? "ᴜ" : "")" // HACK
     }
 
     func number(isIOB: Bool, at date: Date = .now) -> String {
