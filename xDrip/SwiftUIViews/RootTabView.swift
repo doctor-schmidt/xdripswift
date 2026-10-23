@@ -23,7 +23,7 @@ enum IPadLayoutClass: Equatable {
     case compact
     case regular
     case wide
-
+    
     static func resolve(isPad: Bool, width: CGFloat, usesAccessibilityText: Bool) -> Self {
         guard isPad, !usesAccessibilityText else { return .compact }
         if width >= 980 { return .wide }
@@ -97,11 +97,11 @@ struct RootTabDependencies {
     let updateScreenLock: (Bool, Bool) -> Bool
     let selectedFollowerActions: SelectedFollowerActions
     let dexcomShareUploadActions: DexcomShareUploadActions
-
+    
     /// Cancels either screen-lock mode without accidentally enabling it when it is already off.
     func cancelScreenLock() {
         guard rootHomeStateModel.state.isScreenLocked else { return }
-
+        
         _ = updateScreenLock(false, true)
     }
 }
@@ -112,7 +112,7 @@ struct RootTabDependencies {
 /// asynchronous Core Data setup has completed. It never creates a second manager or mirrors data.
 @MainActor final class RootTabStateModel: ObservableObject {
     // MARK: - Published State
-
+    
     @Published private(set) var dependencies: RootTabDependencies?
     @Published private(set) var snoozeDismissalRequest = 0
     @Published private(set) var incomingBackupRequest: IncomingBackupRequest?
@@ -130,13 +130,13 @@ struct RootTabDependencies {
         subsystem: ConstantsLog.subSystem,
         category: ConstantsLog.categoryDataManagement
     )
-
+    
     // MARK: - Presentation
-
+    
     func dismissSnooze() {
         snoozeDismissalRequest += 1
     }
-
+    
     func presentAlert(
         title: String,
         message: String,
@@ -153,32 +153,32 @@ struct RootTabDependencies {
             action: action,
             cancel: cancel
         )
-
+        
         // SwiftUI cannot replace an alert while the previous UIKit presentation is still dismissing
         guard alertRequest == nil, !isAdvancingAlertQueue else {
             pendingAlertRequests.append(request)
             return
         }
-
+        
         alertRequest = request
     }
-
+    
     /// Clears a dismissed alert and presents the next request after UIKit has finished its dismissal.
     func updatePresentedAlert(_ request: RootAlertRequest?) {
         guard request == nil, !isAlertDismissalPending else { return }
         isAlertDismissalPending = true
-
+        
         Task { @MainActor in
             // defer publication until SwiftUI has completed the current alert update
             await Task.yield()
             alertRequest = nil
             isAlertDismissalPending = false
-
+            
             guard !pendingAlertRequests.isEmpty else {
                 isAdvancingAlertQueue = false
                 return
             }
-
+            
             isAdvancingAlertQueue = true
             let nextRequest = pendingAlertRequests.removeFirst()
             try? await Task.sleep(nanoseconds: 300_000_000)
@@ -186,7 +186,7 @@ struct RootTabDependencies {
             isAdvancingAlertQueue = false
         }
     }
-
+    
     func presentTextInput(
         title: String,
         placeholder: String,
@@ -204,25 +204,25 @@ struct RootTabDependencies {
             action: action
         )
     }
-
+    
     func presentPicker(_ pickerViewData: PickerViewData) {
         pickerData = SnoozePickerData(pickerViewData)
     }
-
+    
     /// Returns a notification tap to Home without bypassing the active in-app banner.
     /// The banner owns navigation to Sensor Management or Bluetooth detail.
     func showHomeForSensorHealthNotification() {
         sensorHealthHomeRequest += 1
     }
-
+    
     /// Copies a document supplied by iOS before handing it to the restore workflow.
     func receiveIncomingBackup(_ sourceURL: URL) {
         // The Live Activity uses xdripswift://open only to bring the app to the foreground.
         guard sourceURL.isFileURL,
               sourceURL.pathExtension.caseInsensitiveCompare("xdripbackup") == .orderedSame else { return }
-
+        
         guard !isPreparingIncomingBackup else { return }
-
+        
         isPreparingIncomingBackup = true
         trace(
             "in receiveIncomingBackup, received backup document",
@@ -230,7 +230,7 @@ struct RootTabDependencies {
             category: ConstantsLog.categoryDataManagement,
             type: .info
         )
-
+        
         Task {
             do {
                 let localURL = try await Task.detached(priority: .userInitiated) {
@@ -258,15 +258,15 @@ struct RootTabDependencies {
             }
         }
     }
-
+    
     /// Clears a request after the Settings navigation stack has accepted it.
     func consumeIncomingBackup(id: UUID) {
         guard incomingBackupRequest?.id == id else { return }
         incomingBackupRequest = nil
     }
-
+    
     // MARK: - Configuration
-
+    
     /// Publishes the application services after asynchronous startup has completed.
     func configure(
         coreDataManager: CoreDataManager,
@@ -332,15 +332,15 @@ struct RootTabView: View {
         case bluetooth
         case settings
     }
-
+    
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var stateModel: RootTabStateModel
     @State private var selectedTab = Tab.home
     @State private var bluetoothDetailNavigationRequest = 0
-
+    
     private let applicationCoordinator: RootApplicationCoordinator
     private let tabTitles: RootTabTitles
-
+    
     /// Creates the permanent root view around the coordinator-owned state model.
     init(
         stateModel: RootTabStateModel,
@@ -351,21 +351,21 @@ struct RootTabView: View {
         self.tabTitles = tabTitles
         _stateModel = StateObject(wrappedValue: stateModel)
     }
-
+    
     // MARK: - View
-
+    
     var body: some View {
         GeometryReader { geometry in
             let isLandscape = geometry.size.width > geometry.size.height
-
+            
             ZStack {
                 // Keep the TabView mounted during rotation so UIKit cannot flash its default background.
                 ConstantsAppColors.background
                     .ignoresSafeArea()
-
+                
                 adaptiveTabView(isLandscape: isLandscape)
                     .tint(ConstantsAppColors.selectedTab)
-
+                
                 if let dependencies = stateModel.dependencies {
                     RootScreenLockOverlay(
                         stateModel: dependencies.rootHomeStateModel,
@@ -373,7 +373,7 @@ struct RootTabView: View {
                         unlock: dependencies.cancelScreenLock
                     )
                 }
-
+                
                 if stateModel.isPreparingIncomingBackup {
                     ZStack {
                         Color.black.opacity(0.75).ignoresSafeArea()
@@ -399,7 +399,7 @@ struct RootTabView: View {
             if selectedTab != .home {
                 stateModel.dependencies?.cancelScreenLock()
             }
-
+            
             updateSupportedOrientations(for: selectedTab)
         }
         .onChange(of: scenePhase) { scenePhase in
@@ -429,7 +429,7 @@ struct RootTabView: View {
                     secondaryButton: .cancel(Text(cancelTitle), action: request.cancel)
                 )
             }
-
+            
             return Alert(
                 title: Text(request.title),
                 message: Text(request.message),
@@ -446,7 +446,7 @@ struct RootTabView: View {
             if let request = stateModel.textInputRequest {
                 TextField(request.placeholder, text: $stateModel.textInput)
                     .keyboardType(request.usesDecimalKeyboard ? .decimalPad : .numberPad)
-
+                
                 Button(Texts_Common.Cancel, role: .cancel) {}
                 Button(Texts_Common.Ok) {
                     request.action(stateModel.textInput)
@@ -476,7 +476,7 @@ struct RootTabView: View {
             }
         }
     }
-
+    
     /// Uses the modern iPad top-tab presentation, which can expand into a sidebar. The existing
     /// iPhone tab bar remains byte-for-byte the same view hierarchy on every supported iOS release.
     @ViewBuilder private func adaptiveTabView(isLandscape: Bool) -> some View {
@@ -487,93 +487,100 @@ struct RootTabView: View {
             tabs(isLandscape: isLandscape)
         }
     }
-
+    
     private func tabs(isLandscape: Bool) -> some View {
         TabView(selection: $selectedTab) {
-                    RootHomeTabView(
-                        applicationCoordinator: applicationCoordinator,
-                        dependencies: stateModel.dependencies,
-                        snoozeDismissalRequest: stateModel.snoozeDismissalRequest,
-                        isLandscape: isLandscape,
-                        showBluetooth: {
-                            bluetoothDetailNavigationRequest += 1
-                            selectedTab = .bluetooth
-                        }
-                    )
-                    .tag(Tab.home)
-                    .tabItem {
-                        tabLabel(title: tabTitles.home, systemImage: "drop.fill")
+            // 4. Devices
+            tabContent { dependencies in
+                BluetoothPeripheralsNavigationView(
+                    coreDataManager: dependencies.coreDataManager,
+                    bluetoothPeripheralManager: dependencies.bluetoothPeripheralManager,
+                    sensorProvider: stateModel.sensorProvider,
+                    sensorHealthDetailRequest: bluetoothDetailNavigationRequest
+                )
+            }
+            .tag(Tab.bluetooth)
+            .tabItem {
+                tabLabel(
+                    title: tabTitles.devices,
+                    systemImage: "antenna.radiowaves.left.and.right"
+                )
+            }
+            
+            /* HACK
+            // 3. Statistics
+            Group {
+                if let dependencies = stateModel.dependencies {
+                    RootStatisticsTabView(dependencies: dependencies)
+                } else {
+                    ZStack {
+                        ConstantsAppColors.background
+                            .ignoresSafeArea()
+                        ProgressView()
                     }
+                }
+            }
+            .tag(Tab.statistics)
+            .tabItem {
+                tabLabel(title: tabTitles.statistics, systemImage: "chart.bar.xaxis")
+            }
+            */
+            
+            // 2. Treatments
+            tabContent { dependencies in
+                NavigationStack {
+                    TreatmentsView(coreDataManager: dependencies.coreDataManager)
+                }
+                .tint(ConstantsAppColors.navigationTint)
+            }
+            .tag(Tab.treatments)
+            .tabItem {
+                //tabLabel(title: tabTitles.treatments, systemImage: "list.clipboard.fill")
+                tabLabel(title: tabTitles.treatments, systemImage: "pencil")
+            }
+            
+            // 1. Home
+            RootHomeTabView(
+                applicationCoordinator: applicationCoordinator,
+                dependencies: stateModel.dependencies,
+                snoozeDismissalRequest: stateModel.snoozeDismissalRequest,
+                isLandscape: isLandscape,
+                showBluetooth: {
+                    bluetoothDetailNavigationRequest += 1
+                    selectedTab = .bluetooth
+                }
+            )
+            .tag(Tab.home)
+            .tabItem {
+                tabLabel(title: tabTitles.home, systemImage: "waveform.path.ecg")
+            }
 
-                    tabContent { dependencies in
-                        NavigationStack {
-                            TreatmentsView(coreDataManager: dependencies.coreDataManager)
-                        }
-                        .tint(ConstantsAppColors.navigationTint)
-                    }
-                    .tag(Tab.treatments)
-                    .tabItem {
-                        tabLabel(title: tabTitles.treatments, systemImage: "list.clipboard.fill")
-                    }
-
-                    Group {
-                        if let dependencies = stateModel.dependencies {
-                            RootStatisticsTabView(dependencies: dependencies)
-                        } else {
-                            ZStack {
-                                ConstantsAppColors.background
-                                    .ignoresSafeArea()
-
-                                ProgressView()
-                            }
-                        }
-                    }
-                    .tag(Tab.statistics)
-                    .tabItem {
-                        tabLabel(title: tabTitles.statistics, systemImage: "chart.bar.xaxis")
-                    }
-
-                    tabContent { dependencies in
-                        BluetoothPeripheralsNavigationView(
-                            coreDataManager: dependencies.coreDataManager,
-                            bluetoothPeripheralManager: dependencies.bluetoothPeripheralManager,
-                            sensorProvider: stateModel.sensorProvider,
-                            sensorHealthDetailRequest: bluetoothDetailNavigationRequest
-                        )
-                    }
-                    .tag(Tab.bluetooth)
-                    .tabItem {
-                        tabLabel(
-                            title: tabTitles.devices,
-                            systemImage: "antenna.radiowaves.left.and.right"
-                        )
-                    }
-
-                    tabContent { dependencies in
-                        SettingsNavigationView(
-                            coreDataManager: dependencies.coreDataManager,
-                            soundPlayer: dependencies.soundPlayer,
-                            selectedFollowerActions: dependencies.selectedFollowerActions,
-                            dexcomShareUploadActions: dependencies.dexcomShareUploadActions,
-                            incomingBackupRequest: stateModel.incomingBackupRequest,
-                            consumeIncomingBackup: stateModel.consumeIncomingBackup
-                        )
-                    }
-                    .tag(Tab.settings)
-                    .tabItem {
-                        tabLabel(title: tabTitles.settings, systemImage: "gearshape.fill")
-                    }
+            // 5. Settings
+            tabContent { dependencies in
+                SettingsNavigationView(
+                    coreDataManager: dependencies.coreDataManager,
+                    soundPlayer: dependencies.soundPlayer,
+                    selectedFollowerActions: dependencies.selectedFollowerActions,
+                    dexcomShareUploadActions: dependencies.dexcomShareUploadActions,
+                    incomingBackupRequest: stateModel.incomingBackupRequest,
+                    consumeIncomingBackup: stateModel.consumeIncomingBackup
+                )
+            }
+            .tag(Tab.settings)
+            .tabItem {
+                tabLabel(title: tabTitles.settings, systemImage: "gearshape.fill")
+            }
         }
     }
-
+    
     // MARK: - Tab Content
-
+    
     /// Builds the image and localized title used by the native tab bar.
-    @ViewBuilder private func tabLabel(title: String, systemImage: String) -> some View {
+    private func tabLabel(title: String, systemImage: String) -> some View {
         Image(systemName: systemImage)
-        Text(title)
+            .accessibilityLabel(title)
     }
-
+    
     /// Delays a tab's real content until the application services are ready.
     @ViewBuilder private func tabContent<Content: View>(
         @ViewBuilder content: (RootTabDependencies) -> Content
@@ -585,34 +592,34 @@ struct RootTabView: View {
             ZStack {
                 ConstantsAppColors.background
                     .ignoresSafeArea()
-
+                
                 ProgressView()
             }
         }
     }
-
+    
     /// Home supports the landscape AGP comparison view. The remaining tabs stay portrait.
     private func updateSupportedOrientations(for tab: Tab) {
         let supportedOrientations: UIInterfaceOrientationMask
-
+        
         supportedOrientations = RootOrientationPolicy.supportedOrientations(
             isPad: UIDevice.current.userInterfaceIdiom == .pad,
             isHome: tab == .home,
             allowsHomeRotation: UserDefaults.standard.allowScreenRotation
         )
-
+        
         AppDelegate.supportedOrientations = supportedOrientations
-
+        
         guard let windowScene = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
             .first(where: { $0.activationState == .foregroundActive }),
               let rootController = windowScene.keyWindow?.rootViewController
-        else {
+                else {
             return
         }
-
+        
         rootController.setNeedsUpdateOfSupportedInterfaceOrientations()
-
+        
         if UIDevice.current.userInterfaceIdiom != .pad,
            tab != .home,
            windowScene.interfaceOrientation.isLandscape {
@@ -625,15 +632,15 @@ struct RootTabView: View {
 
 /// Keeps the normal Statistics navigation portrait-only.
 private struct RootStatisticsTabView: View {
-
+    
     let dependencies: RootTabDependencies
     @ObservedObject private var rootHomeStateModel: RootHomeStateModel
-
+    
     init(dependencies: RootTabDependencies) {
         self.dependencies = dependencies
         rootHomeStateModel = dependencies.rootHomeStateModel
     }
-
+    
     var body: some View {
         NavigationStack {
             StatisticsView(
@@ -660,21 +667,21 @@ private struct RootHomeTabView: View {
         case showHideItems
         case aidStatus
         case careLinkPumpStatus
-
+        
         var id: String { rawValue }
     }
-
+    
     @State private var presentedView: PresentedView?
     @State private var showsScreenLockInformation = false
-
+    
     let applicationCoordinator: RootApplicationCoordinator
     let dependencies: RootTabDependencies?
     let snoozeDismissalRequest: Int
     let isLandscape: Bool
     let showBluetooth: () -> Void
-
+    
     // MARK: - View
-
+    
     var body: some View {
         ZStack {
             if let dependencies {
@@ -694,7 +701,7 @@ private struct RootHomeTabView: View {
                     )
                     .ignoresSafeArea(.keyboard, edges: .bottom)
                 }
-
+                
             }
         }
         .padding(
@@ -717,7 +724,7 @@ private struct RootHomeTabView: View {
             if presentedViewID != nil {
                 dependencies?.cancelScreenLock()
             }
-
+            
             updatePresentedViewOrientationLock()
         }
         .onChange(of: snoozeDismissalRequest) { _ in
@@ -739,14 +746,14 @@ private struct RootHomeTabView: View {
         }
         .task(id: showsScreenLockInformation) {
             guard showsScreenLockInformation else { return }
-
+            
             try? await Task.sleep(nanoseconds: 30_000_000_000)
             showsScreenLockInformation = false
         }
     }
-
+    
     // MARK: - Actions and Presentation
-
+    
     /// Connects Home commands to the sheets and screen-lock presentation owned by this tab.
     private func rootHomeActions(from dependencies: RootTabDependencies) -> RootHomeActions {
         var actions = dependencies.rootHomeActions
@@ -759,15 +766,15 @@ private struct RootHomeTabView: View {
         actions.showHideItems = { presentedView = .showHideItems }
         actions.showAIDStatus = {
             presentedView = UserDefaults.standard.dataFlowPolicy.importsTherapyFromCareLink
-                ? .careLinkPumpStatus
-                : .aidStatus
+            ? .careLinkPumpStatus
+            : .aidStatus
         }
         actions.showBluetooth = showBluetooth
         actions.toggleScreenLock = { updateScreenLock(using: dependencies, overrideCurrentState: false, nightMode: true) }
         actions.keepScreenAwake = { updateScreenLock(using: dependencies, overrideCurrentState: true, nightMode: false) }
         return actions
     }
-
+    
     /// Builds the sheet requested by a Home toolbar or status action.
     @ViewBuilder private func destinationView(_ presentedView: PresentedView) -> some View {
         if let dependencies {
@@ -787,8 +794,8 @@ private struct RootHomeTabView: View {
                     dexcomG7Provider: {
                         guard let transmitter = dependencies.transmitterProvider() as? BluetoothTransmitter,
                               let dexcomG7 = dependencies.bluetoothPeripheralManager.getBluetoothPeripheral(for: transmitter) as? DexcomG7
-                        else { return nil }
-
+                                else { return nil }
+                        
                         return dexcomG7
                     },
                     calibrationsAccessor: dependencies.calibrationsAccessor,
@@ -820,45 +827,45 @@ private struct RootHomeTabView: View {
             }
         }
     }
-
+    
     private func dismissSnoozeIfNeeded() {
         if presentedView == .snooze {
             presentedView = nil
         }
     }
-
+    
     /// Home can rotate into the dedicated landscape chart, but the toolbar sheets are portrait-only
     /// workflows. While one is open, temporarily tighten the app delegate orientation mask and then
     /// restore the Home policy when it closes.
     private func updatePresentedViewOrientationLock() {
         let supportedOrientations: UIInterfaceOrientationMask
-
+        
         supportedOrientations = RootOrientationPolicy.supportedOrientations(
             isPad: UIDevice.current.userInterfaceIdiom == .pad,
             isHome: presentedView == nil,
             allowsHomeRotation: UserDefaults.standard.allowScreenRotation
         )
-
+        
         AppDelegate.supportedOrientations = supportedOrientations
-
+        
         guard let windowScene = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
             .first(where: { $0.activationState == .foregroundActive }),
               let rootController = windowScene.keyWindow?.rootViewController
-        else {
+                else {
             return
         }
-
+        
         rootController.setNeedsUpdateOfSupportedInterfaceOrientations()
-
+        
         if UIDevice.current.userInterfaceIdiom != .pad && presentedView != nil {
             windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
         }
     }
-
+    
     private func updateScreenLock(using dependencies: RootTabDependencies, overrideCurrentState: Bool, nightMode: Bool) {
         let didEnable = dependencies.updateScreenLock(overrideCurrentState, nightMode)
-
+        
         if didEnable && !UserDefaults.standard.lockScreenDontShowAgain {
             showsScreenLockInformation = true
         }
@@ -876,11 +883,11 @@ private struct RootScreenLockOverlay: View {
     @ObservedObject var stateModel: RootHomeStateModel
     let allowsTapToUnlock: Bool
     let unlock: () -> Void
-
+    
     var body: some View {
         let state = stateModel.state
         let dimmingType = UserDefaults.standard.screenLockDimmingType
-
+        
         if state.isScreenLocked,
            state.usesScreenLockNightLayout {
             dimmingType.dimmingColor
@@ -889,7 +896,7 @@ private struct RootScreenLockOverlay: View {
                 .contentShape(Rectangle())
                 .onTapGesture {
                     guard allowsTapToUnlock else { return }
-
+                    
                     unlock()
                 }
         }
@@ -906,7 +913,7 @@ private struct RootHomeLandscapeView: View {
     private let nightscoutSyncManager: NightscoutSyncManager
     private let showSensorManagement: () -> Void
     private let showBluetooth: () -> Void
-
+    
     init(dependencies: RootTabDependencies, showSensorManagement: @escaping () -> Void, showBluetooth: @escaping () -> Void) {
         rootHomeStateModel = dependencies.rootHomeStateModel
         sensorHealthIssueManager = dependencies.sensorHealthIssueManager
@@ -915,7 +922,7 @@ private struct RootHomeLandscapeView: View {
         self.showSensorManagement = showSensorManagement
         self.showBluetooth = showBluetooth
     }
-
+    
     var body: some View {
         VStack(spacing: 8) {
             if let issue = sensorHealthIssueManager.visibleIssue {
@@ -934,7 +941,7 @@ private struct RootHomeLandscapeView: View {
                 .padding(.horizontal, 12)
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
-
+            
             if rootHomeStateModel.state.usesScreenLockNightLayout {
                 RootHomeLandscapeValueView(stateModel: rootHomeStateModel)
             } else {
@@ -953,7 +960,7 @@ private struct RootHomeLandscapeView: View {
 private struct RootHomeLandscapeChartView: View {
     @StateObject private var stateModel: LandscapeChartStateModel
     let refreshRevision: Int
-
+    
     init(coreDataManager: CoreDataManager, nightscoutSyncManager: NightscoutSyncManager, refreshRevision: Int) {
         _stateModel = StateObject(wrappedValue: LandscapeChartStateModel(
             coreDataManager: coreDataManager,
@@ -961,7 +968,7 @@ private struct RootHomeLandscapeChartView: View {
         ))
         self.refreshRevision = refreshRevision
     }
-
+    
     var body: some View {
         LandscapeChartView(stateModel: stateModel)
             .onChange(of: refreshRevision) { _ in
@@ -975,7 +982,7 @@ private struct RootHomeLandscapeChartView: View {
 /// Reads the same glucose state as the portrait Home screen while screen lock is active.
 private struct RootHomeLandscapeValueView: View {
     @ObservedObject var stateModel: RootHomeStateModel
-
+    
     var body: some View {
         LandscapeValueView(state: stateModel.state)
     }
@@ -1004,7 +1011,7 @@ extension View {
             self
         }
     }
-
+    
     @ViewBuilder func ipadSheetMinimumSize(width: CGFloat, height: CGFloat) -> some View {
         if UIDevice.current.userInterfaceIdiom == .pad {
             frame(minWidth: width, minHeight: height)
@@ -1012,7 +1019,7 @@ extension View {
             self
         }
     }
-
+    
     @ViewBuilder func ipadLargeSheet(width: CGFloat, height: CGFloat) -> some View {
         if UIDevice.current.userInterfaceIdiom == .pad {
             frame(minWidth: width, minHeight: height)
