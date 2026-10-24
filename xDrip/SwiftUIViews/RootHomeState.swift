@@ -58,7 +58,7 @@ struct RootHomePumpState {
 /// Loop status and optional uploader-battery presentation.
 struct RootHomeLoopState {
     var iob = RootHomeMetricState(title: "IOB", value: "- U")
-    var cob = RootHomeMetricState(title: "", value: "- g") // HACK
+    var cob = RootHomeMetricState(title: "", value: "- g") // HACK to remove COB
     var showsCOB = true
     var showsIOB = true
     var showsAIDStatus = true

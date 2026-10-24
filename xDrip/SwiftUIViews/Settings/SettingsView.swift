@@ -46,12 +46,12 @@ struct SettingsNavigationView: View {
     @StateObject private var router: SettingsRouter
     @StateObject private var presenter: SettingsActionPresenter
     @StateObject private var listModel: SettingsListModel
-
+    
     private let coreDataManager: CoreDataManager
     private let soundPlayer: SoundPlayer
     private let incomingBackupRequest: IncomingBackupRequest?
     private let consumeIncomingBackup: (UUID) -> Void
-
+    
     init(
         coreDataManager: CoreDataManager,
         soundPlayer: SoundPlayer,
@@ -68,7 +68,7 @@ struct SettingsNavigationView: View {
             dexcomShareUploadActions: dexcomShareUploadActions,
             presenter: presenter
         )
-
+        
         self.coreDataManager = coreDataManager
         self.soundPlayer = soundPlayer
         self.incomingBackupRequest = incomingBackupRequest
@@ -77,32 +77,32 @@ struct SettingsNavigationView: View {
         _presenter = StateObject(wrappedValue: presenter)
         _listModel = StateObject(wrappedValue: SettingsListModel(sections: sections))
     }
-
+    
     var body: some View {
         navigationContent
-        .environment(\.settingsNavigationActions, navigationActions)
-        .sheet(isPresented: $router.showsTraceEmail) {
-            SettingsTraceMailView(isPresented: $router.showsTraceEmail) {
-                presenter.showMessage(title: Texts_Common.warning, message: Texts_SettingsView.failedToSendEmail)
+            .environment(\.settingsNavigationActions, navigationActions)
+            .sheet(isPresented: $router.showsTraceEmail) {
+                SettingsTraceMailView(isPresented: $router.showsTraceEmail) {
+                    presenter.showMessage(title: Texts_Common.warning, message: Texts_SettingsView.failedToSendEmail)
+                }
             }
-        }
-        .tint(ConstantsAppColors.navigationTint)
-        .colorScheme(.dark)
-        .onAppear {
-            UserDefaults.standard.showDeveloperSettings = false
-            listModel.reload(.all)
-            openIncomingBackupIfNeeded()
-        }
-        .onChange(of: incomingBackupRequest?.id) { _ in
-            openIncomingBackupIfNeeded()
-        }
-        .onChange(of: router.path) { path in
-            if path.isEmpty {
+            .tint(ConstantsAppColors.navigationTint)
+            .colorScheme(.dark)
+            .onAppear {
+                UserDefaults.standard.showDeveloperSettings = false
                 listModel.reload(.all)
+                openIncomingBackupIfNeeded()
             }
-        }
+            .onChange(of: incomingBackupRequest?.id) { _ in
+                openIncomingBackupIfNeeded()
+            }
+            .onChange(of: router.path) { path in
+                if path.isEmpty {
+                    listModel.reload(.all)
+                }
+            }
     }
-
+    
     @ViewBuilder private var navigationContent: some View {
         if UIDevice.current.userInterfaceIdiom == .pad {
             NavigationSplitView {
@@ -122,38 +122,38 @@ struct SettingsNavigationView: View {
             }
         }
     }
-
+    
     /// Replaces any existing Settings path with the restore screen requested by iOS.
     private func openIncomingBackupIfNeeded() {
         guard let incomingBackupRequest else { return }
-
+        
         router.path = [SettingsRoute(.incomingBackup(incomingBackupRequest))]
     }
-
+    
     private var navigationActions: SettingsNavigationActions {
         SettingsNavigationActions { title, content in
             router.show(.custom(title: title, content: content))
         }
     }
-
+    
     @ViewBuilder private func destination(for route: SettingsRoute) -> some View {
         switch route.destination {
         case let .settingsScreen(settingsScreen):
             SettingsScreenDestinationView(settingsScreen: settingsScreen, presenter: presenter)
-
+            
         case let .textEntry(textEntry):
             SettingsTextEntryView(textEntry: textEntry, close: router.closeCurrentView)
-
+            
         case let .selectionList(selectionList):
             SettingsSelectionListView(selectionList: selectionList, close: router.closeCurrentView)
-
+            
         case let .datePicker(datePicker):
             SettingsDatePickerView(datePicker: datePicker, close: router.closeCurrentView)
-
+            
         case .alertTypes:
             NativeAlertTypesSettingsView(coreDataManager: coreDataManager, router: router)
                 .onlineHelp(.alertsAndNotifications)
-
+            
         case let .alertTypeEditor(alertType, listViewModel):
             AlertTypeEditorView(
                 alertType: alertType,
@@ -163,11 +163,11 @@ struct SettingsNavigationView: View {
                     listViewModel.reload()
                 }
             )
-
+            
         case .alerts:
             NativeAlertsSettingsView(coreDataManager: coreDataManager, router: router)
                 .onlineHelp(.alertsAndNotifications)
-
+            
         case let .alertEditor(mode, listViewModel):
             AlertEntryEditorView(
                 mode: mode,
@@ -180,7 +180,7 @@ struct SettingsNavigationView: View {
                     router.show(.alertEditor(newMode, listViewModel))
                 }
             )
-
+            
         case .m5Stack:
             SettingsScreenDestinationView(
                 settingsScreen: SettingsScreen(title: Texts_SettingsView.m5StackSettingsViewScreenTitle, onlineHelpTopic: .m5Stack) { presenter in
@@ -188,22 +188,22 @@ struct SettingsNavigationView: View {
                 },
                 presenter: presenter
             )
-
+            
         case let .timeSchedule(timeSchedule):
             TimeScheduleView(timeSchedule: timeSchedule)
-
+            
         case .loopDelaySchedule:
             LoopDelayScheduleView()
-
+            
         case let .dataManagement(flow):
             DataManagementView(coreDataManager: coreDataManager, flow: flow)
                 .navigationTitle(flow.navigationTitle)
                 .navigationBarTitleDisplayMode(.large)
                 .onlineHelp(.dataManagement)
-
+            
         case .troubleshootingLog:
             TroubleshootingLogView(coreDataManager: coreDataManager)
-
+            
         case let .incomingBackup(request):
             DataManagementView(
                 coreDataManager: coreDataManager,
@@ -211,10 +211,10 @@ struct SettingsNavigationView: View {
                 initialBackupURL: request.url,
                 initialBackupDidOpen: { consumeIncomingBackup(request.id) }
             )
-                .navigationTitle(DataManagementFlow.restore.navigationTitle)
-                .navigationBarTitleDisplayMode(.large)
-                .onlineHelp(.dataManagement)
-
+            .navigationTitle(DataManagementFlow.restore.navigationTitle)
+            .navigationBarTitleDisplayMode(.large)
+            .onlineHelp(.dataManagement)
+            
         case let .custom(title, content):
             content(router.closeCurrentView)
                 .navigationTitle(title)
@@ -230,11 +230,11 @@ private struct SettingsIPadPlaceholderView: View {
             Image(systemName: "gearshape.2")
                 .font(.system(size: 44, weight: .light))
                 .foregroundStyle(Color(.colorTertiary))
-
+            
             Text(Texts_SettingsView.screenTitle)
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(Color(.colorPrimary))
-
+            
             Text(Texts_SettingsView.selectCategory)
                 .font(.body)
                 .foregroundStyle(Color(.colorSecondary))
@@ -250,16 +250,16 @@ private struct SettingsIPadPlaceholderView: View {
 private struct SettingsIPadSidebarView: View {
     @ObservedObject var listModel: SettingsListModel
     @ObservedObject var presenter: SettingsActionPresenter
-
+    
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
                 Text(Texts_SettingsView.screenTitle)
                     .font(.largeTitle.weight(.bold))
                     .foregroundStyle(Color(.colorPrimary))
-
+                
                 Spacer()
-
+                
                 OnlineHelpButton(topic: .settings)
                     .font(.title3)
                     .frame(width: 44, height: 44)
@@ -269,7 +269,7 @@ private struct SettingsIPadSidebarView: View {
             .padding(.horizontal, 20)
             .padding(.top, 8)
             .padding(.bottom, 4)
-
+            
             SettingsView(listModel: listModel, presenter: presenter)
                 .frame(maxWidth: 780)
                 .frame(maxWidth: .infinity)
@@ -277,7 +277,7 @@ private struct SettingsIPadSidebarView: View {
         .background(ConstantsUI.listBackGroundColor.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
     }
-
+    
 }
 
 /// Creates a fresh list model for one grouped child Settings screen.
@@ -288,7 +288,7 @@ struct SettingsScreenDestinationView: View {
     private let title: String
     private let onlineHelpTopic: OnlineHelpTopic?
     private let toolbarActions: @MainActor () -> [SettingsToolbarAction]
-
+    
     init(settingsScreen: SettingsScreen, presenter: SettingsActionPresenter) {
         self.presenter = presenter
         self.introduction = settingsScreen.introduction
@@ -299,7 +299,7 @@ struct SettingsScreenDestinationView: View {
             sections: settingsScreen.makeSections(presenter)
         ))
     }
-
+    
     var body: some View {
         SettingsListView(
             listModel: listModel,
@@ -317,7 +317,7 @@ struct SettingsScreenDestinationView: View {
                 if let onlineHelpTopic {
                     OnlineHelpButton(topic: onlineHelpTopic)
                 }
-
+                
                 ForEach(toolbarActions()) { action in
                     Button(action: action.action) {
                         Image(systemName: action.symbolName)
@@ -337,12 +337,12 @@ struct SettingsScreenDestinationView: View {
 private struct NativeAlertTypesSettingsView: View {
     @StateObject private var viewModel: AlertTypesSettingsViewModel
     @ObservedObject private var router: SettingsRouter
-
+    
     init(coreDataManager: CoreDataManager, router: SettingsRouter) {
         self.router = router
         _viewModel = StateObject(wrappedValue: AlertTypesSettingsViewModel(coreDataManager: coreDataManager))
     }
-
+    
     var body: some View {
         AlertTypesSettingsView(viewModel: viewModel) { alertType in
             router.show(.alertTypeEditor(alertType, viewModel))
@@ -355,12 +355,12 @@ private struct NativeAlertTypesSettingsView: View {
 private struct NativeAlertsSettingsView: View {
     @StateObject private var viewModel: AlertsSettingsViewModel
     @ObservedObject private var router: SettingsRouter
-
+    
     init(coreDataManager: CoreDataManager, router: SettingsRouter) {
         self.router = router
         _viewModel = StateObject(wrappedValue: AlertsSettingsViewModel(coreDataManager: coreDataManager))
     }
-
+    
     var body: some View {
         AlertsSettingsView(viewModel: viewModel) { request in
             router.show(.alertEditor(.edit(
@@ -379,17 +379,17 @@ private struct NativeAlertsSettingsView: View {
 private struct SettingsTraceMailView: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
     let onFailure: () -> Void
-
+    
     func makeCoordinator() -> Coordinator {
         Coordinator(isPresented: $isPresented, onFailure: onFailure)
     }
-
+    
     func makeUIViewController(context: Context) -> MFMailComposeViewController {
         let mailViewController = MFMailComposeViewController()
         mailViewController.mailComposeDelegate = context.coordinator
         mailViewController.setToRecipients([ConstantsTrace.traceFileDestinationAddress])
         mailViewController.setMessageBody(Texts_SettingsView.emailbodyText, isHTML: true)
-
+        
         let traceFiles = Trace.getTraceFilesInData()
         for (index, traceFile) in traceFiles.0.enumerated() {
             mailViewController.addAttachmentData(
@@ -398,7 +398,7 @@ private struct SettingsTraceMailView: UIViewControllerRepresentable {
                 fileName: traceFiles.1[index]
             )
         }
-
+        
         let appInfo = Trace.getAppInfoFileAsData()
         if let appInfoData = appInfo.0 {
             mailViewController.addAttachmentData(
@@ -407,28 +407,28 @@ private struct SettingsTraceMailView: UIViewControllerRepresentable {
                 fileName: appInfo.1
             )
         }
-
+        
         return mailViewController
     }
-
+    
     func updateUIViewController(_ uiViewController: MFMailComposeViewController, context: Context) {}
-
+    
     final class Coordinator: NSObject, MFMailComposeViewControllerDelegate {
         @Binding private var isPresented: Bool
         private let onFailure: () -> Void
-
+        
         init(isPresented: Binding<Bool>, onFailure: @escaping () -> Void) {
             _isPresented = isPresented
             self.onFailure = onFailure
         }
-
+        
         func mailComposeController(
             _ controller: MFMailComposeViewController,
             didFinishWith result: MFMailComposeResult,
             error: Error?
         ) {
             isPresented = false
-
+            
             if result == .failed || error != nil {
                 onFailure()
             }
@@ -442,7 +442,7 @@ private struct SettingsTraceMailView: UIViewControllerRepresentable {
 struct SettingsView: View {
     @ObservedObject var listModel: SettingsListModel
     @ObservedObject var presenter: SettingsActionPresenter
-
+    
     var body: some View {
         SettingsListView(
             listModel: listModel,
@@ -459,30 +459,51 @@ private struct SettingsAppBannerView: View {
     var body: some View {
         HStack(spacing: 18) {
             appIcon
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(ConstantsHomeView.applicationName)
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color(.colorPrimary))
-
-                Text(Texts_SettingsView.appBannerVersion(appVersion))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color(.colorSecondary))
+            VStack(spacing: 12) {
+                HStack {
+                    facebookLink("   GD", url: "https://www.facebook.com/groups/4747621411996068")
+                    Spacer(minLength: 8)
+                    Link("Roma", destination: URL(string: "shortcuts://run-shortcut?name=Libros")!)
+                        .buttonStyle(BorderlessButtonStyle())
+                        .foregroundColor(.orange)
+                    Spacer(minLength: 8)
+                    Link("Duo", destination: URL(string: "shortcuts://run-shortcut?name=Duo")!)
+                        .buttonStyle(BorderlessButtonStyle())
+                        .foregroundColor(.green)
+                }
+                HStack {
+                    facebookLink("   T1G", url: "https://facebook.com/groups/660633730675058")
+                    Spacer(minLength: 8)
+                    facebookLink("NS", url: "https://facebook.com/groups/cgminthecloud")
+                    Spacer(minLength: 8)
+                    Link("PF", destination: URL(string: "shortcuts://run-shortcut?name=PF")!)
+                        .buttonStyle(BorderlessButtonStyle())
+                        .foregroundColor(.yellow)
+                }
             }
-
         }
         .padding(.vertical, 4)
     }
-
+    
     private var appIcon: some View {
-        Image("AppIconPreview")
-            .resizable()
-        .frame(width: 58, height: 58)
-        .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+        Link(
+            destination: URL(string: "https://facebook.com/groups/853994615056838")!
+        ) {
+            Image("AppIconPreview")
+                .resizable()
+                .frame(width: 58, height: 58)
+                .clipShape(
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                )
+        }
+        .buttonStyle(BorderlessButtonStyle())
     }
-
+    
+    private func facebookLink(_ title: String, url: String) -> some View {
+        Link(title, destination: URL(string: url)!)
+            .buttonStyle(BorderlessButtonStyle())
+    }
+    
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
     }
@@ -492,7 +513,7 @@ enum SettingsAppInfo {
     static func releaseNotesURL(version: String) -> URL? {
         let releaseURL = ConstantsHomeView.gitHubURL + "/releases/tag/" + version
         let fallbackURL = ConstantsHomeView.gitHubURL + "/releases"
-
+        
         return URL(string: releaseURL) ?? URL(string: fallbackURL)
     }
 }
@@ -506,7 +527,7 @@ enum SettingsRootSection: Int, CaseIterable, SettingsProtocol {
     case troubleshooting
     case about
     case advanced
-
+    
     var iconSymbolName: String {
         switch self {
         case .dataSource:
@@ -527,12 +548,12 @@ enum SettingsRootSection: Int, CaseIterable, SettingsProtocol {
             return ConstantsSettingsIcons.developerSettingsIcon
         }
     }
-
+    
     /// Creates the Settings view model for this root section.
     func viewModel(coreDataManager: CoreDataManager?) -> SettingsViewModelProtocol {
         viewModel(coreDataManager: coreDataManager, selectedFollowerActions: .none)
     }
-
+    
     func viewModel(
         coreDataManager: CoreDataManager?,
         selectedFollowerActions: SelectedFollowerActions = .none,
@@ -581,14 +602,14 @@ struct SettingsViewGroupedSettingsViewModel: SettingsViewModelProtocol, Settings
     private let rows: [SettingsGroupedRow]
     private let leadingRows: () -> [SettingsRow]
     private let uploadRefresh: DexcomShareUploadSettingsRefresh?
-
+    
     init(title: String, rows: [SettingsGroupedRow], leadingRows: @escaping () -> [SettingsRow] = { [] }, uploadRefreshState: DexcomShareUploadState? = nil, uploadDefaults: UserDefaults = .standard) {
         uploadRefresh = uploadRefreshState.map { DexcomShareUploadSettingsRefresh(state: $0, defaults: uploadDefaults) }
         self.title = title
         self.rows = rows.filter(\.isVisible)
         self.leadingRows = leadingRows
     }
-
+    
     static func glucoseDisplay() -> SettingsViewGroupedSettingsViewModel {
         SettingsViewGroupedSettingsViewModel(
             title: Texts_SettingsView.glucoseDisplaySectionTitle,
@@ -661,7 +682,7 @@ struct SettingsViewGroupedSettingsViewModel: SettingsViewModelProtocol, Settings
             }
         )
     }
-
+    
     static func alertsAndNotifications() -> SettingsViewGroupedSettingsViewModel {
         SettingsViewGroupedSettingsViewModel(
             title: Texts_SettingsView.alertsAndNotificationsSectionTitle,
@@ -705,7 +726,7 @@ struct SettingsViewGroupedSettingsViewModel: SettingsViewModelProtocol, Settings
             ]
         )
     }
-
+    
     static func sharingAndServices(dexcomShareUploadActions: DexcomShareUploadActions = .none, uploadDefaults: UserDefaults = .standard, coreDataManager: CoreDataManager? = nil) -> SettingsViewGroupedSettingsViewModel {
         SettingsViewGroupedSettingsViewModel(
             title: Texts_SettingsView.sharingAndServicesSectionTitle,
@@ -852,7 +873,7 @@ struct SettingsViewGroupedSettingsViewModel: SettingsViewModelProtocol, Settings
                             makeSections: { presenter in
                                 let viewModel = SettingsViewSpeakSettingsViewModel(coreDataManager: coreDataManager)
                                 return SettingsListFactory.makeSections(providers: [viewModel], presenter: presenter)
-                                    + [SettingsSectionModel(id: 1) { SettingsViewSpeakSettingsViewModel.scheduleSection() }]
+                                + [SettingsSectionModel(id: 1) { SettingsViewSpeakSettingsViewModel.scheduleSection() }]
                             }
                         )
                     }
@@ -870,12 +891,12 @@ struct SettingsViewGroupedSettingsViewModel: SettingsViewModelProtocol, Settings
             uploadRefreshState: dexcomShareUploadActions.state, uploadDefaults: uploadDefaults
         )
     }
-
+    
     /// Shows an enabled summary while leaving disabled parent rows uncluttered.
     private static func groupedStatusDetail(isEnabled: Bool) -> String? {
         isEnabled ? Texts_Common.enabled : nil
     }
-
+    
     /// Adds the same last-known-good Nightscout connection marker used in the
     /// Nightscout child screen, but only when the parent row is showing Enabled.
     private static func nightscoutConnectionIndicator() -> SettingsIndicator? {
@@ -883,15 +904,15 @@ struct SettingsViewGroupedSettingsViewModel: SettingsViewModelProtocol, Settings
               let lastConnection = UserDefaults.standard.timeStampOfLastFollowerConnection else {
             return nil
         }
-
+        
         guard lastConnection > .distantPast else {
             return SettingsIndicator(color: ConstantsAppColors.urgent)
         }
-
+        
         let connectionIsRecent = lastConnection > Date().addingTimeInterval(-Double(ConstantsFollower.secondsUntilFollowerDisconnectWarningNightscout))
         return SettingsIndicator(color: connectionIsRecent ? ConstantsAppColors.normal : ConstantsAppColors.urgent)
     }
-
+    
     /// Shows why Calendar Share is unavailable in Calendar Follow mode, otherwise the share status.
     private static func calendarShareStatusDetail() -> String? {
         guard calendarShareRowIsEnabled() else { return Texts_Common.disabled }
@@ -900,12 +921,12 @@ struct SettingsViewGroupedSettingsViewModel: SettingsViewModelProtocol, Settings
         let status = calendarShareStatus()
         return status == .active ? Texts_Common.enabled : status.description
     }
-
+    
     /// Adds the same status dot used by the Calendar Share child status row.
     private static func calendarShareStatusIndicator() -> SettingsIndicator? {
         guard calendarShareRowIsEnabled() else { return nil }
         guard UserDefaults.standard.createCalendarEvent else { return nil }
-
+        
         switch calendarShareStatus() {
         case .active:
             return SettingsIndicator(color: .green)
@@ -921,20 +942,20 @@ struct SettingsViewGroupedSettingsViewModel: SettingsViewModelProtocol, Settings
             return SettingsIndicator(color: .gray)
         }
     }
-
+    
     private static func calendarShareRowIsEnabled() -> Bool {
         !(UserDefaults.standard.followerDataSourceType == .calendar && !UserDefaults.standard.isMaster)
     }
-
+    
     private static func calendarShareStatus() -> CalendarShareStatus {
         guard UserDefaults.standard.calenderId != nil else { return .notConfigured }
         return CalendarShareStatus(rawValue: UserDefaults.standard.calendarShareStatus) ?? .notConfigured
     }
-
+    
     func sectionTitle() -> String? {
         title
     }
-
+    
     func settingsRows(sectionID: Int) -> [SettingsRow] {
         leadingRows() + rows.map { row in
             SettingsRow(
@@ -949,43 +970,43 @@ struct SettingsViewGroupedSettingsViewModel: SettingsViewModelProtocol, Settings
             )
         }
     }
-
+    
     func settingsRowText(index: Int) -> String {
         rows[index].title
     }
-
+    
     func accessoryType(index: Int) -> SettingsAccessory {
         .disclosure
     }
-
+    
     func detailedText(index: Int) -> String? {
         rows[index].detail?()
     }
-
-
+    
+    
     func numberOfRows() -> Int {
         rows.count
     }
-
+    
     func onRowSelect(index: Int) -> SettingsSelectedRowAction {
         .nothing
     }
-
+    
     func isEnabled(index: Int) -> Bool {
         true
     }
-
+    
     func completeSettingsViewRefreshNeeded(index: Int) -> Bool {
         false
     }
-
+    
     func storeMessageHandler(messageHandler: @escaping ((String, String) -> Void)) {}
-
-
+    
+    
     func storeSectionReloadClosure(sectionReloadClosure: @escaping () -> Void) {
         uploadRefresh?.reload = sectionReloadClosure
     }
-
+    
     func storeRowReloadClosure(rowReloadClosure: @escaping ((Int) -> Void)) {}
 }
 
@@ -1004,18 +1025,18 @@ enum SettingsListFactory {
                 selectedFollowerActions: selectedFollowerActions,
                 dexcomShareUploadActions: dexcomShareUploadActions
             )
-
+            
             configure(viewModel: viewModel, presenter: presenter)
-
+            
             if let dataSourceViewModel = viewModel as? SettingsViewDataSourceSettingsViewModel {
                 let sectionIDBase = section.rawValue * 10
-
+                
                 return (0 ..< 2).map { offset in
                     let sectionID = sectionIDBase + offset
-
+                    
                     return SettingsSectionModel(id: sectionID) {
                         let settingsSection = dataSourceViewModel.settingsSections(sectionIDBase: sectionIDBase)[offset]
-
+                        
                         return SettingsSection(
                             title: settingsSection.title,
                             iconSymbolName: offset == 0 ? section.iconSymbolName : nil,
@@ -1025,16 +1046,16 @@ enum SettingsListFactory {
                     }
                 }
             }
-
+            
             let sectionID = section.rawValue * 10
-
+            
             return [SettingsSectionModel(id: sectionID) {
                 guard let nativeProvider = viewModel as? SettingsNativeSectionProvider else {
                     fatalError("Settings view model must provide a native Settings section")
                 }
-
+                
                 let settingsSection = nativeProvider.settingsSection(sectionID: sectionID)
-
+                
                 return SettingsSection(
                     title: settingsSection.title,
                     iconSymbolName: section.iconSymbolName,
@@ -1044,23 +1065,23 @@ enum SettingsListFactory {
             }]
         }
     }
-
+    
     /// Builds the M5Stack child sections from their existing section providers.
     static func makeM5StackSections(presenter: SettingsActionPresenter) -> [SettingsSectionModel] {
         M5StackSettingsSection.allCases.map { section in
             let viewModel = section.viewModel(coreDataManager: nil)
             configure(viewModel: viewModel, presenter: presenter)
-
+            
             return SettingsSectionModel(id: section.rawValue) {
                 guard let nativeProvider = viewModel as? SettingsNativeSectionProvider else {
                     fatalError("M5Stack Settings view model must provide a native Settings section")
                 }
-
+                
                 return nativeProvider.settingsSection(sectionID: section.rawValue)
             }
         }
     }
-
+    
     /// Builds section models from existing native section providers. This is the
     /// common path for grouped Settings screens, where a simple parent row can
     /// open one or more existing sections without moving their logic.
@@ -1070,13 +1091,13 @@ enum SettingsListFactory {
     ) -> [SettingsSectionModel] {
         providers.enumerated().map { offset, viewModel in
             configure(viewModel: viewModel, presenter: presenter)
-
+            
             return SettingsSectionModel(id: offset) {
                 viewModel.settingsSection(sectionID: offset)
             }
         }
     }
-
+    
     /// Connects view-model message and row-reload callbacks to the Settings presenter.
     static func configure(viewModel: SettingsViewModelProtocol, presenter: SettingsActionPresenter) {
         viewModel.storeMessageHandler { title, message in
@@ -1084,13 +1105,13 @@ enum SettingsListFactory {
                 presenter.showMessage(title: title, message: message)
             }
         }
-
+        
         viewModel.storeRowReloadClosure { _ in
             DispatchQueue.main.async {
                 presenter.objectWillChange.send()
             }
         }
-
+        
         viewModel.storeSectionReloadClosure {
             DispatchQueue.main.async {
                 presenter.objectWillChange.send()
@@ -1102,7 +1123,7 @@ enum SettingsListFactory {
 enum M5StackSettingsSection: Int, CaseIterable, SettingsProtocol {
     case general
     case bluetooth
-
+    
     /// Creates the M5Stack Settings view model for the selected subsection.
     /// The unused Core Data parameter is kept so this enum still matches SettingsProtocol.
     func viewModel(coreDataManager: CoreDataManager?) -> SettingsViewModelProtocol {

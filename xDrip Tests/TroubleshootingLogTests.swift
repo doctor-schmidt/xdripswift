@@ -1339,7 +1339,7 @@ final class TroubleshootingLogTests: XCTestCase {
         let text = report.reportText
         let elapsed = Date().timeIntervalSince(start)
         XCTAssertEqual(text.components(separatedBy: "New reading:").count - 1, entries.count)
-        XCTAssertTrue(text.contains("App Name: xDrip4iOS"))
+        XCTAssertTrue(text.contains("App Name: xDrip"))
         // A generous regression guard for a simulator. Export also runs away from main, but it
         // should not spend the scene watchdog's entire allowance constructing ICU formatters.
         XCTAssertLessThan(elapsed, 5)
@@ -1362,7 +1362,7 @@ final class TroubleshootingLogTests: XCTestCase {
         XCTAssertTrue(report.reportText.contains("Apple Health could not complete"))
         XCTAssertEqual(report.headerLines.first, "xdripswift Troubleshooting Log")
         XCTAssertFalse(report.headerLines.contains(where: { $0.hasPrefix("Project:") }))
-        XCTAssertTrue(report.headerLines.contains("App Name: xDrip4iOS"))
+        XCTAssertTrue(report.headerLines.contains("App Name: xDrip"))
         XCTAssertTrue(report.headerLines.contains("Version: 7.2.1"))
         XCTAssertTrue(report.headerLines.contains("Mode: Follower (Nightscout)"))
         XCTAssertTrue(report.headerLines.contains("Dexcom Bluetooth channel: Mobile App"))
@@ -1978,7 +1978,7 @@ final class TroubleshootingLogTests: XCTestCase {
     private func makeAppInfo() -> TroubleshootingLogAppInfo {
         TroubleshootingLogAppInfo(
             projectName: "xdripswift",
-            appName: "xDrip4iOS",
+            appName: "xDrip",
             version: "7.2.1",
             deviceClass: "iPhone",
             systemVersion: "19.0",
