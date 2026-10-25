@@ -58,7 +58,7 @@ struct RootHomePumpState {
 /// Loop status and optional uploader-battery presentation.
 struct RootHomeLoopState {
     var iob = RootHomeMetricState(title: "IOB", value: "- U")
-    var cob = RootHomeMetricState(title: "", value: "- g") // HACK to remove COB
+    var cob = RootHomeMetricState(title: "COB", value: "- g")
     var showsCOB = true
     var showsIOB = true
     var showsAIDStatus = true
@@ -394,15 +394,25 @@ final class RootHomeStateModel: ObservableObject {
             $0.dataSource.watchCollectorHealth = health
         }
     }
+    
+    // Home therapy banner: display IOB only; retain COB calculations elsewhere.
+    func applyTherapyMetrics(
+        to loop: inout RootHomeLoopState,
+        at date: Date = .now,
+        external: AIDStatus? = nil,
+        historical: Bool = false
+    ) {
+        let metrics = TherapyMetricsManager.shared.snapshot(
+            at: date,
+            external: external,
+            historical: historical
+        )
 
-    func applyTherapyMetrics(to loop: inout RootHomeLoopState, at date: Date = .now, external: AIDStatus? = nil, historical: Bool = false) {
-        let metrics = TherapyMetricsManager.shared.snapshot(at: date, external: external, historical: historical)
         loop.therapyMetrics = metrics
         loop.showsIOB = metrics.iob.isVisible(at: date)
-        loop.showsCOB = metrics.cob.isVisible(at: date)
-        loop.showsAIDStatus = UserDefaults.standard.dataFlowPolicy.showsTherapyStatus
+        loop.showsCOB = false
         loop.iob.value = metrics.iob.formatted(isIOB: true, at: date)
-        loop.cob.value = metrics.cob.formatted(isIOB: false, at: date)
+        loop.showsAIDStatus = UserDefaults.standard.dataFlowPolicy.showsTherapyStatus
     }
 
     func setStatisticsLoading() {

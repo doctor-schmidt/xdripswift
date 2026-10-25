@@ -507,7 +507,6 @@ struct RootTabView: View {
                 )
             }
             
-            /* HACK
             // 3. Statistics
             Group {
                 if let dependencies = stateModel.dependencies {
@@ -524,7 +523,6 @@ struct RootTabView: View {
             .tabItem {
                 tabLabel(title: tabTitles.statistics, systemImage: "chart.bar.xaxis")
             }
-            */
             
             // 2. Treatments
             tabContent { dependencies in
