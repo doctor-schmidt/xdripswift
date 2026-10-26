@@ -488,6 +488,7 @@ struct RootTabView: View {
         }
     }
     
+    // personal order bottom selections
     private func tabs(isLandscape: Bool) -> some View {
         TabView(selection: $selectedTab) {
             // 4. Devices

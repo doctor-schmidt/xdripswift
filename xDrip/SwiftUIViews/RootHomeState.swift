@@ -407,7 +407,6 @@ final class RootHomeStateModel: ObservableObject {
             external: external,
             historical: historical
         )
-
         loop.therapyMetrics = metrics
         loop.showsIOB = metrics.iob.isVisible(at: date)
         loop.showsCOB = false
